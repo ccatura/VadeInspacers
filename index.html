@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head><title>VADE INSPACERS</title>
+
+<!--REFERENCE SITES
+	http://jsfiddle.net/kzXek/ 
+	https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_animate_3
+	http://jqfundamentals.com/chapter/jquery-basics
+-->
+
+
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> <!--bootstrap-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script> <!--bootstrap-->
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> <!--bootstrap-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script> <!--jquery-->
+
+<style>
+@font-face {
+	font-family: 'PixelEmulator-xq08';
+	src: url('fonts/PixelEmulator-xq08.ttf');
+	format('truetype');
+}
+
+body {
+	font-family: 'PixelEmulator-xq08';
+	font-size: 32px;
+	background-color: #000000;
+	color: #ffffff;
+	margin: 50px 50px 50px 50px;
+	line-height: 28px;
+	overflow: hidden;
+}
+
+.myContainer {
+	background-image: url("images/stars.jpg");
+	position: absolute;
+	width: 1000px;
+	height: 700px;
+	border: 5px solid white;
+}
+.topHeader {
+	text-align: center;
+}
+
+.bottomFooter {
+	text-align: left;
+	position: absolute;
+	bottom: 1px;
+}
+
+.centerParagraph {
+	text-align: center;
+	position: relative;
+	top: 80px;
+	color: #00c8ff;
+}
+
+.gameOver {
+	text-align: center;
+	position: relative;
+	top: 230px;
+	color: red;
+	font-size: 60px;
+	display: none;
+}
+#player {
+	width: 100px;
+	position: absolute;
+}
+
+#enemy {
+	width: 100px;
+	position: absolute;
+	left: 50px;
+	bottom: 500px;
+}
+
+#playerBullet {
+	width: 7px;
+	height 40px;
+	position: absolute;
+	background: #ffffff;
+}
+
+#enemyBullet {
+	width: 7px;
+	height 40px;
+	position: absolute;
+	background: #ff0000;
+	left: 50px;
+	bottom: 100px;
+}
+
+#blinker {
+	opacity: 1;
+}
+
+</style>
+
+<script>
+
+function game() {
+	var score = 0; //resets score
+	var playerPos = ($(".myContainer").width() / 2) - ($('#player').width() / 2); //starts player in middle of screen
+	
+	
+	var bottomPos = 40;
+	var player = document.getElementById("player"); //sets player graphic to player variable
+	var enemy = document.getElementById("enemy"); //sets enemy graphic to enemy variable
+	var myContainer = document.getElementById("myContainer"); //sets container graphic to containervariable
+	var playerBullet = document.getElementById("playerBullet"); //sets playerBullet graphic to playerBullet variable
+	var enemyBullet = document.getElementById("enemyBullet"); //sets enemyBullet graphic to enemyBullet variable
+	var playerBulletSpeed = 3;
+	var speed = 1; //speed of player
+	var playerPadding = 10; //padding between player and sides of screen
+	
+	var moveLeft = 0; //left movement "boolean"
+	var moveRight = 0; //right movement "boolean"
+	
+	var sound1 = document.getElementById("shootSound");
+	var bg_lo = document.getElementById("bg_lo");
+	var bg_hi = document.getElementById("bg_hi");
+	var bg_toggle = "bg_lo";
+	var bgMusicSpeed = 1000;
+	var musicOn = 1;
+	var enemyState = 1;
+	var blinkSpeed = 500;
+	var debug = 0;
+	var enemyReset = 1;
+	var gameInProgress = 0;
+	var gameOver = 0;
+	
+	$(playerBullet).hide();
+	$(enemyBullet).hide();
+
+	setInterval(movePlayer, 1); //sets player movement ani
+	setInterval(blinker, 500); //sets blinking 1up ani
+	setInterval(moveEnemy, 1000);
+	setInterval(enemyShoot, 1000);
+	setInterval(checkStuff, 30);
+	var bgPlay = setInterval(bgMusic, bgMusicSpeed); //sets bg music
+
+
+		function checkStuff() {
+			checkCollision(enemy, playerBullet);
+			checkCollision(player, enemyBullet);
+			if (parseInt($(playerBullet).css("bottom")) > 625) $(playerBullet).hide();
+			if (parseInt($(enemyBullet).css("bottom")) < 30) {$(enemyBullet).hide(); $(enemyBullet).css({"bottom":2000, "left":0});}
+			if (enemyReset) {
+				enemyResetPosition();
+				enemyReset = 0;
+			}
+			//console.log("Enemy Reset: " + enemyReset);
+		}
+
+		function enemyShoot() {
+			if (gameInProgress) {
+				var x = parseInt($(enemy).css("left")) + (parseInt($(enemy).css("width")) / 2);
+				var y = parseInt($(enemy).css("bottom"));
+				var z = $(".myContainer").height();
+				$(enemyBullet).css({"bottom":y, "left":x}); //reset enemyBullet position from bottom
+				$(enemyBullet).show();
+				$(enemyBullet).animate({bottom: 10}, z, "linear");
+
+				console.log("Bloop! ");
+			}
+		}
+
+	function gameEnd() {
+		gameInProgress = 0;
+		musicOn = 0;
+		if (!gameOver) $('#hitPlayerSound').trigger('play'); //make hit sound
+		gameOver = 1;
+		setTimeout(function() {$(player).css("display", "none");}, 1000);
+		$(".gameOver").css("display", "block");
+		console.log(gameOver);
+	}
+
+	function playerShoot() {
+		if (!gameOver) sound1.play(); //plays the bang sound (the shoot sound)
+		$(playerBullet).css({"bottom":bottomPos + 30, "left":playerPos + 50}); //reset playerBullet position from bottom
+		$(playerBullet).show();
+			$(playerBullet).animate({bottom: $(".myContainer").height()}, 1000, "linear");
+			//if (debug) console.log("Bottom: " + playerBullet.style.bottom + " Left: " + playerBullet.style.left);
+			if (debug) console.log("Bang!");
+	}
+
+
+		
+		function checkCollision(character, ammunition) {
+			var characterLeftX 		= parseInt($(character).css("left"));
+			var characterRightX 	= parseInt($(character).css("left")) + parseInt($(enemy).css("width"));
+			var characterTopY 		= parseInt($(character).css("bottom"));
+			var characterBottomY 	= parseInt($(character).css("bottom")) - parseInt($(enemy).css("height"));
+			
+			var ammunitionLeftX 	= parseInt($(ammunition).css("left"));
+			var ammunitionRightX 	= parseInt($(ammunition).css("left")) + parseInt($(playerBullet).css("width"));
+			var ammunitionTopY 		= parseInt($(ammunition).css("bottom"));
+			var ammunitionBottomY 	= parseInt($(ammunition).css("bottom")) - parseInt($(playerBullet).css("height"));
+
+			//console.log(character.id + " AL: " + ammunitionLeftX + "   AR: " + ammunitionRightX); //dont delete this one!!!
+
+
+
+
+
+
+
+			//Checks if coordinates of ammunition is within coordinates of character
+			if (ammunitionLeftX   > characterLeftX 	&&
+				ammunitionRightX  < characterRightX &&
+				ammunitionTopY    < characterTopY 	&&
+				ammunitionBottomY > characterBottomY) {
+				
+					//this needs to be cleaned up and maybe put into a function with
+					//parameters to be passed to it
+					if (!gameOver) if(character.id == "enemy") $('#hitEnemySound').trigger('play'); //make hit sound
+					if(character.id == "player") gameEnd();
+					if(character.id == "enemy") if ($(character).is(':animated')) if (!gameOver) score+= 10;
+					document.getElementById("score").innerHTML = score;
+					$(character).stop();
+					$(ammunition).stop();
+					$(ammunition).hide();
+					$(ammunition).css("bottom", 70); //needs to be a better way to hide the bullet
+					$(character).attr("src", "images/explode.gif"); //changes image to explode.gif
+					if(character.id == "enemy") {
+						setTimeout(function() {
+							$(character).attr("src", "images/enemy.gif"); //after 1 second changes character back to character
+							enemyReset = 1;
+						}, 500);
+					}
+					
+					console.log("Direct hit!");
+			}
+		}
+
+
+/***************************************************
+***************************************************
+***************************************************
+***************************************************
+***************************************************
+***************************************************
+fix sounds to be consistant.... some are #bg_lo, some are bg_lo
+some are jquery and some are javascript
+***************************************************
+***************************************************
+***************************************************
+***************************************************
+***************************************************/
+
+
+
+
+	function movePlayer() {
+		if (moveLeft) { //moves player to left
+			if (!(playerPos < playerPadding)) {
+				if (playerPos > $(".myContainer").width() - (($(player).width() + playerPadding))) {
+					playerPos = $(".myContainer").width() - ($(player).width() + playerPadding);
+				}
+					player.style.left = (playerPos-= speed) + "px";
+					if (debug) console.log("Moving Left");
+			}
+		} else if (moveRight) { //moves player to right
+			if (!(playerPos > $(".myContainer").width() - ($(player).width() + playerPadding))) {
+				player.style.left = (playerPos+= speed) + "px";
+				if (debug) console.log("Moving Right");
+			}
+		} else { //does not move player
+			if (debug) console.log("Stopped");
+		}
+					//console.log($(".myContainer").width());
+	}
+	
+	function enemyResetPosition() {
+	var i = (parseInt($(".myContainer").css("height")) - (parseInt($(enemy).css("height"))) - 10);
+		$(enemy).css({"left":1, "bottom": i});
+		enemyRest = 0;
+		//console.log("ENEMY SHOULD BE IN at: " + i + "px");
+	}
+	
+	function moveEnemy() {
+		if (!enemyReset) {
+			var enemyX = Math.floor((Math.random() * (($(".myContainer").width()) - 200)) + 50);
+			var enemyY = Math.floor((Math.random() * (($(".myContainer").height()) - 400)) + 200);
+			$(enemy).stop();
+			$(enemy).animate({left: enemyX, bottom: enemyY}, 1000, "linear");
+			//console.log("Dir change to X: " + enemyX + "  Y: " + enemyY);
+		} else {
+			enemyResetPosition();
+		}
+	}
+
+	function blinker() { //makes 1up on top of screen blink
+		$('#blinker').fadeOut(blinkSpeed);
+		$('#blinker').fadeIn(blinkSpeed);
+	}
+
+	
+	function bgMusic () {
+		if (!gameOver) {
+			if (bgMusicSpeed > 260) bgMusicSpeed-= 5;
+				if (bg_toggle == "bg_hi") {
+					if (musicOn == 1) $('#bg_hi').trigger('play');
+					bg_toggle = "bg_lo";
+				} else {
+					if (musicOn == 1) $('#bg_lo').trigger('play');
+					bg_toggle = "bg_hi";
+				}
+		
+		clearInterval(bgPlay);
+		bgPlay = setInterval(bgMusic, bgMusicSpeed);
+		//console.log("Enemy Bottom: " + enemy.style.bottom + " Left: " + enemy.style.left);
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+	document.getElementById("score").innerHTML = score; //set initial score
+	$(player).css({"left":playerPos, "bottom":bottomPos}); //$(player).css("bottom", bottomPos); //old way
+	$(playerBullet).css({"left":playerPos + 50, "bottom":0}); //set initial position of bullet
+
+	if (!gameOver) {
+	$(document).ready(function() {
+		$(document).keydown(function (e) {
+			ek = e.keyCode
+			gameInProgress = 1;
+			$(".centerParagraph").css("display", "none"); //makes instruction dissapear when first key is pressed
+			document.getElementById("credit").innerHTML = "0"; //changes credit to zero when game starts
+			if (ek == 77) {if (musicOn) {musicOn = 0} else {musicOn = 1};} //msuic toggle
+			if (ek == 81) {if (debug) {debug = 0; console.log("Debugging Off");} else {debug = 1; console.log("Debugging On");};} //msuic toggle
+			if (ek == 37) {moveLeft = 1;} //while left arrow key pressed, move state enabled
+			if (ek == 39) {moveRight = 1;} //while right arrow key pressed, move state enabled
+			if (ek == 32 && (!$(playerBullet).is(':animated'))) { //if space key pressed & playerBullet not already animating, then process
+					playerShoot();
+			}
+		});
+	
+		$(document).keyup(function (e) { //these help smooth the movement of the player
+			ek = e.keyCode
+			if (ek == 37) {moveLeft = 0;} //when left arrow key not pressed, move state disabled
+			if (ek == 39) {moveRight = 0;} //when right arrow key not pressed, move state disabled
+		});
+	});
+	}
+}
+</script>
+
+
+	
+
+
+
+
+</head>
+<body onLoad="game();">
+
+
+<div class="myContainer">
+
+<!-- setup game sounds -->
+<audio id="shootSound"><source src="sounds/shoot.wav" type="audio/wav"></audio>
+<audio id="hitEnemySound"><source src="sounds/invaderkilled.wav" type="audio/wav"></audio>
+<audio id="hitPlayerSound"><source src="sounds/explosion.wav" type="audio/wav"></audio>
+<audio id="bg_hi"><source src="sounds/bg_hi.wav" type="audio/wav"></audio>
+<audio id="bg_lo"><source src="sounds/bg_lo.wav" type="audio/wav"></audio>
+
+<span class="bottomFooter">
+<hr style="width: 990px; margin: 0px; border: 1px solid #ffffff;">
+CREDIT <span id="credit">1</span></span>
+
+
+<!-- top header -- title, score, etc -->
+<!-- using some bootstrap for ease of alignment -->
+<div class="topHeader">
+<span style="color: #00aa00;">VADE INSPACERS</span><br>
+<span class="col-md-6"><span id="blinker">1UP</span></span>
+<span class="col-md-6">2UP</span><br>
+
+<span class="col-md-6"><span id="score"></span></span>
+<span class="col-md-6"><span>0</span></span>
+</div>
+
+
+<!-- setup graphics -->
+<div id="playerBullet">&nbsp;</div>
+<div id="enemyBullet">&nbsp;</div>
+<img id="player" src="images/player.png">
+<img id="enemy" src="images/enemy.gif">
+
+
+
+<!-- instructions -->
+<div class="centerParagraph">
+<span style="color: red;">Shoot The Alien!</span><br>
+<span style="color: red;">Don't Get Shot!</span><br><br>
+<span class="col-md-5" style="text-align:right;">'LEFT/RIGHT'</span>
+<span class="col-md-2" style="text-align:center;">-></span>
+<span class="col-md-5" style="text-align:left;">MOVE</span>
+
+<br>
+
+<span class="col-md-5" style="text-align:right;">'SPACE'</span>
+<span class="col-md-2" style="text-align:center;">-></span>
+<span class="col-md-5" style="text-align:left;">FIRE</span>
+
+<br>
+
+<span class="col-md-5" style="text-align:right;">'M'</span>
+<span class="col-md-2" style="text-align:center;">-></span>
+<span class="col-md-5" style="text-align:left;">TOGGLE MUSIC</span>
+
+<br><br>
+<span style="color: white;">Press any key to start</span><br><br>
+<span style="color: yellow; font-size: 48px;">Get Ready!</span>
+</div>
+
+<div class="gameOver">GAME OVER</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>
